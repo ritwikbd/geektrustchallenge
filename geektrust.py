@@ -23,12 +23,17 @@ def logger(log):
     f=open('logs.txt','a')
     f.write(log+ '\n')
     f.close()
-    print(log)
+    #print(log)
     
 def insert_to_db(data,mode):
     fdb=open("database.txt",mode)
     fdb.write(data+ '\n')
     fdb.close()
+    
+def query_db(month):
+    data=pd.read_csv("database.txt",delimiter='=')
+    data=dict(zip(data["Month"],data["Values"].str.split(',')))
+    return data[month]
 
 def allocate_fn(args):
     try:
@@ -43,9 +48,17 @@ def allocate_fn(args):
         return 1
     
 def rebalance_fn(args):
-    #logic
-    print(portfolio['ratio'])
-    return 49
+    try:
+        if sum(portfolio['last_rebalance']) == 0:
+            print("CANNOT_REBALANCE")
+            logger("CANNOT_REBALANCE")
+        else:
+            for vals in portfolio['last_rebalance']:
+                print(vals,end=' ')
+            print('\n',end='')
+        return 0
+    except:
+        return 1
 
 def change_fn(args,configs):
     LAST_ELEMENT=-1 #We know that the last element is the month
@@ -59,6 +72,11 @@ def change_fn(args,configs):
             
         record='={},{},{}'.format(*portfolio['current_balance'])
         insert_to_db(month+record,'a')
+        if(month in configs['rebalance_months'].split(',')):
+            total_value=sum(portfolio['current_balance'])
+            for i in range(0,len(portfolio['current_balance'])):
+                portfolio['current_balance'][i]=int(portfolio['ratio'][i]*total_value)
+            portfolio['last_rebalance']=portfolio['current_balance']
         return 0
     except:
         return 1
@@ -76,11 +94,10 @@ def balance_fn(args):
     LAST_ELEMENT=-1 #We know that the last element is the month
     try:
         month=args[LAST_ELEMENT]
-        data=pd.read_csv("database.txt",delimiter='=')
-        data=dict(zip(data["Month"],data["Values"]))
-        for value in data[month]:
-            print(value,end='')
-        print('\n')
+        month_data=query_db(month)
+        for value in month_data:
+            print(value,end=' ')
+        print('\n',end='')
         return 0
     except:
         return 1
@@ -116,7 +133,7 @@ def get_commands(input_file_path):
 def get_service(action_item,confs):
     comm_key=list(action.keys())[0]
     comm_args=list(action.values())[0]
-    print(comm_key)
+    #print(comm_key)
     if comm_key=="ALLOCATE":
         exit_code=allocate_fn(comm_args)
         logger("Allocation done with exit code "+str(exit_code))
@@ -128,10 +145,10 @@ def get_service(action_item,confs):
         logger("SIP done with exit code "+str(exit_code))
     elif comm_key=="BALANCE":
         exit_code=balance_fn(comm_args)
-        print("Balance done with exit code ",exit_code)
+        logger("Balance done with exit code "+str(exit_code))
     elif comm_key=="REBALANCE":
         exit_code=rebalance_fn(comm_args)
-        print("Rebalance done with exit code ",exit_code)
+        logger("Rebalance done with exit code "+str(exit_code))
   
 
 if __name__ == '__main__':
