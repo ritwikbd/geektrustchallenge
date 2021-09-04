@@ -20,22 +20,29 @@ portfolio={'current_balance':[0,0,0],
            }
 
 def logger(log):
+    """ Arguments taken: 1 string. Returns Nothing
+    This function takes a string and enters it into the logs.txt file"""
     f=open('logs.txt','a')
     f.write(log+ '\n')
     f.close()
-    #print(log)
     
 def insert_to_db(data,mode):
+    """ Arguments taken: 2 strings. Returns Nothing
+    This function takes a string and enters it into the database.txt file. Using mode selection, we refresh the DB for every run"""
     fdb=open("database.txt",mode)
     fdb.write(data+ '\n')
     fdb.close()
     
 def query_db(month):
+    """Arguments taken: 1 string. Returns 1 list
+    This file takes a month as key and returns the Balance at the end of that month"""
     data=pd.read_csv("database.txt",delimiter='=')
     data=dict(zip(data["Month"],data["Values"].str.split(',')))
     return data[month]
 
 def allocate_fn(args):
+    """Arguments taken: 1 list. Returns 1 integer
+    This function takes a list as given in the ALLOCATE command and assigns it as original values and stores ratio of investment"""
     try:
         portfolio['current_balance']=list(map(int,args))
         total_amount=sum(portfolio['current_balance'])
@@ -43,11 +50,12 @@ def allocate_fn(args):
             portfolio['ratio'][i]=portfolio['current_balance'][i]/total_amount
         insert_to_db('Month=Values','w')
         return 0
-
     except:
         return 1
     
 def rebalance_fn(args):
+    """Arguments taken: 1 list. Returns 1 integer
+    This function prints the last values immediately after the last rebalancing and appropriate message if rebalancing has not been done"""
     try:
         if sum(portfolio['last_rebalance']) == 0:
             print("CANNOT_REBALANCE")
@@ -61,6 +69,8 @@ def rebalance_fn(args):
         return 1
 
 def change_fn(args,configs):
+    """Arguments taken: 1 list, 1 dictionary. Returns 1 integer
+    This function makes all the computations needed for every month including, SIP, Market Change and Rebalancing"""
     LAST_ELEMENT=-1 #We know that the last element is the month
     try:
         month=args[LAST_ELEMENT]
@@ -70,20 +80,21 @@ def change_fn(args,configs):
                 portfolio['current_balance'][i]=portfolio['current_balance'][i]+portfolio['sip'][i] #Updating SIP
             portfolio['current_balance'][i]=int(portfolio['current_balance'][i]+(change_vector[i]/100)*portfolio['current_balance'][i]) #Updating Market Value
             
-        record='={},{},{}'.format(*portfolio['current_balance'])
-        insert_to_db(month+record,'a')
         if(month in configs['rebalance_months'].split(',')):
             total_value=sum(portfolio['current_balance'])
             for i in range(0,len(portfolio['current_balance'])):
                 portfolio['current_balance'][i]=int(portfolio['ratio'][i]*total_value)
             portfolio['last_rebalance']=portfolio['current_balance']
+        
+        record='={},{},{}'.format(*portfolio['current_balance'])
+        insert_to_db(month+record,'a')
         return 0
     except:
         return 1
 
 def sip_fn(args):
-    """
-    """
+    """Arguments taken: 1 list. Returns 1 integer
+    This function sets the monthly increments in the SIP field of the portfolio"""
     try:
         portfolio['sip']=list(map(int,args))
         return 0
@@ -91,6 +102,8 @@ def sip_fn(args):
         return 1
 
 def balance_fn(args):
+    """Arguments taken: 1 list. Returns 1 integer
+    This function retrieves from the database and prints the values for the month specified"""
     LAST_ELEMENT=-1 #We know that the last element is the month
     try:
         month=args[LAST_ELEMENT]
@@ -104,6 +117,8 @@ def balance_fn(args):
 
 
 def get_confs():
+    """Arguments taken: None. Returns 1 dictionary
+    This function retrieves all config values from config file."""
     conf_file=pd.read_csv("confs.txt",delimiter='=')
     confs_dict= dict(zip(conf_file['keys'],conf_file['values']))
     return confs_dict
@@ -131,9 +146,10 @@ def get_commands(input_file_path):
 
 
 def get_service(action_item,confs):
+    """Arguments taken: 2 dictionaries. Returns nothing
+    This function acts as the navigator and calls the corresponding functions"""
     comm_key=list(action.keys())[0]
     comm_args=list(action.values())[0]
-    #print(comm_key)
     if comm_key=="ALLOCATE":
         exit_code=allocate_fn(comm_args)
         logger("Allocation done with exit code "+str(exit_code))
@@ -155,8 +171,8 @@ if __name__ == '__main__':
     
     logger("\n\nMy money problem run at "+str(time.asctime()))
     confs=get_confs()
-    #input_file=sys.argv[1]
-    input_file="input1.txt"
+    input_file=sys.argv[1]
+    #input_file="input1.txt"
     commands=get_commands(input_file)
     for action in commands:
         get_service(action,confs)
