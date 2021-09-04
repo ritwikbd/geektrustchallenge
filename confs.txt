@@ -1,6 +1,3 @@
 keys=values
-command_ALLOCATE=allocate_fn
-command_SIP=sip_fn
-command_CHANGE=change_fn
-command_BALANCE=balance_fn
-command_REBALANCE=rebalance_fn
+start_month=JANUARY
+rebalance_months=JUNE,DECEMBER

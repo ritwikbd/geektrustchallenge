@@ -19,42 +19,53 @@ portfolio={'current_balance':[0,0,0],
            'ratio':[0.0,0.0,0.0]
            }
 
-
 def logger(log):
     f=open('logs.txt','a')
     f.write(log+ '\n')
     f.close()
     print(log)
+    
+def insert_to_db(data,mode):
+    fdb=open("database.txt",mode)
+    fdb.write(data+ '\n')
+    fdb.close()
 
 def allocate_fn(args):
     try:
         portfolio['current_balance']=list(map(int,args))
+        total_amount=sum(portfolio['current_balance'])
+        for i in range(0,len(portfolio['ratio'])):
+            portfolio['ratio'][i]=portfolio['current_balance'][i]/total_amount
+        insert_to_db('Month=Values','w')
         return 0
+
     except:
         return 1
     
 def rebalance_fn(args):
     #logic
-    #print(args)
+    print(portfolio['ratio'])
     return 49
 
-def change_fn(args):
+def change_fn(args,configs):
     LAST_ELEMENT=-1 #We know that the last element is the month
     try:
         month=args[LAST_ELEMENT]
         change_vector=[float(x.strip('%')) for x in args[:LAST_ELEMENT]]
         for i in range(0,len(portfolio['current_balance'])):
-            if month != "JANUARY":
-                print(month)
-                portfolio['current_balance'][i]=portfolio['current_balance'][i]+portfolio['sip'][i]
-            portfolio['current_balance'][i]=int(portfolio['current_balance'][i]+(change_vector[i]/100)*portfolio['current_balance'][i])
-            print(portfolio['current_balance'][i],end=' ')
-            #print(args[i])
+            if month != configs['start_month']:
+                portfolio['current_balance'][i]=portfolio['current_balance'][i]+portfolio['sip'][i] #Updating SIP
+            portfolio['current_balance'][i]=int(portfolio['current_balance'][i]+(change_vector[i]/100)*portfolio['current_balance'][i]) #Updating Market Value
+            
+        record='={},{},{}'.format(*portfolio['current_balance'])
+        insert_to_db(month+record,'a')
         return 0
     except:
         return 1
 
 def sip_fn(args):
+    """
+    """
     try:
         portfolio['sip']=list(map(int,args))
         return 0
@@ -62,10 +73,14 @@ def sip_fn(args):
         return 1
 
 def balance_fn(args):
+    LAST_ELEMENT=-1 #We know that the last element is the month
     try:
-        for investment in portfolio['current_balance']:
-            print(investment, end=' ')
-        print('')
+        month=args[LAST_ELEMENT]
+        data=pd.read_csv("database.txt",delimiter='=')
+        data=dict(zip(data["Month"],data["Values"]))
+        for value in data[month]:
+            print(value,end='')
+        print('\n')
         return 0
     except:
         return 1
@@ -98,17 +113,16 @@ def get_commands(input_file_path):
     return parsed_commands
 
 
-def get_service(action_item):
+def get_service(action_item,confs):
     comm_key=list(action.keys())[0]
     comm_args=list(action.values())[0]
     print(comm_key)
     if comm_key=="ALLOCATE":
         exit_code=allocate_fn(comm_args)
-        message="Allocation done with exit code "+str(exit_code)
-        logger(message)
+        logger("Allocation done with exit code "+str(exit_code))
     elif comm_key=="CHANGE":
-        exit_code=change_fn(comm_args)
-        print("Change done with exit code ",exit_code)
+        exit_code=change_fn(comm_args,confs)
+        logger("Change done with exit code "+str(exit_code))
     elif comm_key=="SIP":
         exit_code=sip_fn(comm_args)
         logger("SIP done with exit code "+str(exit_code))
@@ -128,5 +142,5 @@ if __name__ == '__main__':
     input_file="input1.txt"
     commands=get_commands(input_file)
     for action in commands:
-        get_service(action)
+        get_service(action,confs)
     
