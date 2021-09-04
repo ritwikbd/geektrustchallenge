@@ -2,11 +2,47 @@
 """
 Created on Sat Sep  4 08:51:17 2021
 
-@author: ritwi
+Assumptions:    Balances are always floored to the nearest integers.
+                The rebalancing happens on 6th (June) and 12th (December) month.
+                The allocation always happens from January, and SIP from February.
+@author: ritwik
 """
 
 import pandas as pd
 import sys
+
+portfolio={'current_balance':[0,0,0],
+           'current_month':1,
+           'last_rebalance':[0,0,0]
+           }
+
+
+
+def allocate_fn(args):
+    #logic
+    #print(args)
+    return 66
+
+def change_fn(args):
+    #logic
+    #print(args)
+    return 92
+
+def sip_fn(args):
+    #logic
+    #print(args)
+    return 23
+
+def balance_fn(args):
+    #logic
+    #print(args)
+    return 51
+
+def rebalance_fn(args):
+    #logic
+    #print(args)
+    return 49
+
 
 def get_confs():
     conf_file=pd.read_csv("confs.txt",delimiter='=')
@@ -35,14 +71,26 @@ def get_commands(input_file_path):
     return parsed_commands
 
 
+def get_service(action_item):
+    comm_key=list(action.values())[0]
+    switcher={
+                "ALLOCATE":allocate_fn(comm_key),
+                "CHANGE":change_fn(comm_key),
+                "SIP":sip_fn(comm_key),
+                "BALANCE":balance_fn(comm_key),
+                "REBALANCE":rebalance_fn(comm_key),
+        }
+    print(list(action.keys())[0])
+    print(switcher.get(list(action.keys())[0]))
+    
+
 
 if __name__ == '__main__':
     confs=get_confs()
-    print(confs)
     #input_file=sys.argv[1]
     input_file="input1.txt"
     commands=get_commands(input_file)
     
     for action in commands:
-        print(action)
+        get_service(action)
     
